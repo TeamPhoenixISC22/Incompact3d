@@ -444,12 +444,16 @@ contains
 
     ! Perform communications if needed
     if (sync_vel_needed) then
-      call transpose_x_to_y(ux1,ux2)
-      call transpose_x_to_y(uy1,uy2)
-      call transpose_x_to_y(uz1,uz2)
-      call transpose_y_to_z(ux2,ux3)
-      call transpose_y_to_z(uy2,uy3)
-      call transpose_y_to_z(uz2,uz3)
+      call transpose_x_to_y_start(ux1,ux2)
+      call transpose_x_to_y_start(uy1,uy2)
+      call transpose_x_to_y_start(uz1,uz2)
+      
+      call transpose_x_to_y_wait(ux1,ux2)
+      call transpose_y_to_z_start(ux2,ux3)
+      call transpose_x_to_y_wait(uy1,uy2)
+      call transpose_y_to_z_start(uy2,uy3)
+      call transpose_x_to_y_wait(uz1,uz2)
+      call transpose_y_to_z_start(uz2,uz3)
       sync_vel_needed = .false.
     endif
 
@@ -461,20 +465,35 @@ contains
     call dery (ta2,ux2,di2,sy,ffyp,fsyp,fwyp,ppy,ysize(1),ysize(2),ysize(3),1,ubcx)
     call dery (tb2,uy2,di2,sy,ffy,fsy,fwy,ppy,ysize(1),ysize(2),ysize(3),0,ubcy)
     call dery (tc2,uz2,di2,sy,ffyp,fsyp,fwyp,ppy,ysize(1),ysize(2),ysize(3),1,ubcz)
+
+    ! Wait for necessary transposes to finish
+    call transpose_y_to_z_wait(ux2,ux3)
+    call transpose_y_to_z_wait(uy2,uy3)
+    call transpose_y_to_z_wait(uz2,uz3)
     !!z-derivatives
     call derz (ta3,ux3,di3,sz,ffzp,fszp,fwzp,zsize(1),zsize(2),zsize(3),1,ubcx)
     call derz (tb3,uy3,di3,sz,ffzp,fszp,fwzp,zsize(1),zsize(2),zsize(3),1,ubcy)
     call derz (tc3,uz3,di3,sz,ffz,fsz,fwz,zsize(1),zsize(2),zsize(3),0,ubcz)
     !!all back to x-pencils
-    call transpose_z_to_y(ta3,td2)
-    call transpose_z_to_y(tb3,te2)
-    call transpose_z_to_y(tc3,tf2)
-    call transpose_y_to_x(td2,tg1)
-    call transpose_y_to_x(te2,th1)
-    call transpose_y_to_x(tf2,ti1)
-    call transpose_y_to_x(ta2,td1)
-    call transpose_y_to_x(tb2,te1)
-    call transpose_y_to_x(tc2,tf1)
+    
+    call transpose_z_to_y_start(ta3,td2)
+    call transpose_z_to_y_start(tb3,te2)
+    call transpose_z_to_y_start(tc3,tf2)
+    
+    call transpose_z_to_y_wait(ta3,td2)
+    call transpose_y_to_x_start(td2,tg1)
+    call transpose_z_to_y_wait(tb3,te2)
+    call transpose_y_to_x_start(te2,th1)
+    call transpose_z_to_y_wait(tc3,tf2)
+
+    call transpose_y_to_x_start(tf2,ti1)
+    call transpose_y_to_x_start(ta2,td1)
+    call transpose_y_to_x_start(tb2,te1)
+    call transpose_y_to_x_start(tc2,tf1)
+
+    call transpose_y_to_x_wait(ta2,td1)
+    call transpose_y_to_x_wait(tb2,te1)
+    call transpose_y_to_x_wait(tc2,tf1)
     !du/dx=ta1 du/dy=td1 and du/dz=tg1
     !dv/dx=tb1 dv/dy=te1 and dv/dz=th1
     !dw/dx=tc1 dw/dy=tf1 and dw/dz=ti1

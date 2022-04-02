@@ -636,9 +636,9 @@ contains
          !write(*,*) 'Warning: I do not own this node' 
       endif
            
-      call MPI_ALLREDUCE(Ux_part,Ux,1,real_type,MPI_SUM,MPI_COMM_WORLD,ierr)
-      call MPI_ALLREDUCE(Uy_part,Uy,1,real_type,MPI_SUM,MPI_COMM_WORLD,ierr)
-      call MPI_ALLREDUCE(Uz_part,Uz,1,real_type,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call MPI_IALLREDUCE(Ux_part,Ux,1,real_type,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call MPI_IALLREDUCE(Uy_part,Uy,1,real_type,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call MPI_IALLREDUCE(Uz_part,Uz,1,real_type,MPI_SUM,MPI_COMM_WORLD,ierr)
         
       Turbine%Ux_upstream=Ux
       Turbine%Uy_upstream=Uy

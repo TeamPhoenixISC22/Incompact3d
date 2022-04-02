@@ -340,16 +340,35 @@ contains
     call filter(zero)
     call filx(uxf1,ux,di1,fisx,fiffx,fifsx,fifwx,xsize(1),xsize(2),xsize(3),0,ubcx)
     call filx(uzf1,uz,di1,fisx,fiffxp,fifsxp,fifwxp,xsize(1),xsize(2),xsize(3),1,ubcz)
-    call transpose_x_to_y(uxf1,ta2)
-    call transpose_x_to_y(uzf1,tb2)
-    call transpose_y_to_z(ta2,ta3)
-    call transpose_y_to_z(tb2,tb3)
+
+    ! Perform transposes syncronously
+    call transpose_x_to_y_start(uxf1,ta2)
+    call transpose_x_to_y_start(uzf1,tb2)
+    
+    call transpose_x_to_y_wait(uxf1,ta2)
+    call transpose_y_to_z_start(ta2,ta3)
+    call transpose_x_to_y_wait(uzf1,tb2)
+    call transpose_y_to_z_start(tb2,tb3)
+
+    ! Wait for transposes to finish
+    call transpose_y_to_z_wait(ta2,ta3)
+    call transpose_y_to_z_wait(tb2,tb3)
+
     call filz(uxf3,ta3,di3,fisz,fiffzp,fifszp,fifwzp,zsize(1),zsize(2),zsize(3),1,ubcx)
     call filz(uzf3,tb3,di3,fisz,fiffz,fifsz,fifwz,zsize(1),zsize(2),zsize(3),0,ubcz)
-    call transpose_z_to_y(uxf3,ta2)
-    call transpose_z_to_y(uzf3,tb2)
-    call transpose_y_to_x(ta2,uxf1)
-    call transpose_y_to_x(tb2,uzf1)
+    
+    ! Perform transposes syncronously
+    call transpose_z_to_y_start(uxf3,ta2)
+    call transpose_z_to_y_start(uzf3,tb2)
+
+    call transpose_z_to_y_wait(uxf3,ta2)
+    call transpose_y_to_x_start(ta2,uxf1)
+    call transpose_z_to_y_wait(uzf3,tb2)
+    call transpose_y_to_x_start(tb2,uzf1)
+
+    ! Wait for transposes to finish
+    call transpose_y_to_x_wait(ta2,uxf1)
+    call transpose_y_to_x_wait(tb2,uzf1)
 
     if (iscalar==1) then
       call filx(phif1,phi(:,:,:,1),di1,fisx,fiffx,fifsx,fifwx,xsize(1),xsize(2),xsize(3),0,zero)
@@ -509,10 +528,10 @@ contains
        L_HAve_local=L_HAve_local
        Q_HAve_local=Q_HAve_local
 
-       call MPI_ALLREDUCE(PsiM_HAve_local,PsiM_HAve,1,real_type,MPI_SUM,MPI_COMM_WORLD,code)
-       call MPI_ALLREDUCE(PsiH_HAve_local,PsiH_HAve,1,real_type,MPI_SUM,MPI_COMM_WORLD,code)
-       call MPI_ALLREDUCE(L_HAve_local,L_HAve,1,real_type,MPI_SUM,MPI_COMM_WORLD,code)
-       call MPI_ALLREDUCE(Q_HAve_local,Q_HAve,1,real_type,MPI_SUM,MPI_COMM_WORLD,code)
+       call MPI_IALLREDUCE(PsiM_HAve_local,PsiM_HAve,1,real_type,MPI_SUM,MPI_COMM_WORLD,code)
+       call MPI_IALLREDUCE(PsiH_HAve_local,PsiH_HAve,1,real_type,MPI_SUM,MPI_COMM_WORLD,code)
+       call MPI_IALLREDUCE(L_HAve_local,L_HAve,1,real_type,MPI_SUM,MPI_COMM_WORLD,code)
+       call MPI_IALLREDUCE(Q_HAve_local,Q_HAve,1,real_type,MPI_SUM,MPI_COMM_WORLD,code)
 
        PsiM_HAve=PsiM_HAve/(nxc*nzc)
        PsiH_HAve=PsiH_HAve/(nxc*nzc)
@@ -671,12 +690,23 @@ contains
       nshift = int(dshift/dz)
 
       ! Compute spanwise-shifted velocity field
-      call transpose_x_to_y(ux,td2)
-      call transpose_x_to_y(uy,te2)
-      call transpose_x_to_y(uz,tf2)
-      call transpose_y_to_z(td2,td3)
-      call transpose_y_to_z(te2,te3)
-      call transpose_y_to_z(tf2,tf3)
+
+      ! Perform transposes syncronously
+      call transpose_x_to_y_start(ux,td2)
+      call transpose_x_to_y_start(uy,te2)
+      call transpose_x_to_y_start(uz,tf2)
+
+      call transpose_x_to_y_wait(ux,td2)
+      call transpose_y_to_z_start(td2,td3)
+      call transpose_x_to_y_wait(uy,te2)
+      call transpose_y_to_z_start(te2,te3)
+      call transpose_x_to_y_wait(uz,tf2)
+      call transpose_y_to_z_start(tf2,tf3)
+      
+      ! Wait for transposes to finish
+      call transpose_y_to_z_wait(td2,td3)
+      call transpose_y_to_z_wait(te2,te3)
+      call transpose_y_to_z_wait(tf2,tf3)
 
       do k=1,nz-nshift
         ux3_s(:,:,k+nshift) = td3(:,:,k)
@@ -689,12 +719,17 @@ contains
         uz3_s(:,:,k) = tf3(:,:,nz-nshift+k)
       enddo 
 
-      call transpose_z_to_y(ux3_s,td2)
-      call transpose_z_to_y(uy3_s,te2)
-      call transpose_z_to_y(uz3_s,tf2)
-      call transpose_y_to_x(td2,ux_s)
-      call transpose_y_to_x(te2,uy_s)
-      call transpose_y_to_x(tf2,uz_s)
+      ! Perform transposes syncronously
+      call transpose_z_to_y_start(ux3_s,td2)
+      call transpose_z_to_y_start(uy3_s,te2)
+      call transpose_z_to_y_start(uz3_s,tf2)
+
+      call transpose_z_to_y_wait(ux3_s,td2)
+      call transpose_y_to_x_start(td2,ux_s)
+      call transpose_z_to_y_wait(uy3_s,te2)
+      call transpose_y_to_x_start(te2,uy_s)
+      call transpose_z_to_y_wait(uz3_s,tf2)
+      call transpose_y_to_x_start(tf2,uz_s)
     else
       ux_s=ux
       uy_s=uy
@@ -731,6 +766,11 @@ contains
           else 
             lambda=zero
           endif
+
+          ! Wait for any possible running transposes to finish
+          call transpose_y_to_x_wait(td2,ux_s)
+          call transpose_y_to_x_wait(te2,uy_s)
+          call transpose_y_to_x_wait(tf2,uz_s)
           if (ishiftedper==1) then
             ux(i+npe-nfe,j,k)=lambda*ux_s(i,j,k)+(one-lambda)*ux(i+npe-nfe,j,k)
             uy(i+npe-nfe,j,k)=lambda*uy_s(i,j,k)+(one-lambda)*uy(i+npe-nfe,j,k)
@@ -907,13 +947,13 @@ contains
       enddo
     enddo
 
-    call MPI_ALLREDUCE(u_HAve_local,u_HAve,ny,real_type,MPI_SUM,MPI_COMM_WORLD,code)
-    call MPI_ALLREDUCE(v_HAve_local,v_HAve,ny,real_type,MPI_SUM,MPI_COMM_WORLD,code)
-    call MPI_ALLREDUCE(w_HAve_local,w_HAve,ny,real_type,MPI_SUM,MPI_COMM_WORLD,code)
-    call MPI_ALLREDUCE(uxy_HAve_local,uxy_HAve,ny,real_type,MPI_SUM,MPI_COMM_WORLD,code)
-    call MPI_ALLREDUCE(uyz_HAve_local,uyz_HAve,ny,real_type,MPI_SUM,MPI_COMM_WORLD,code)
-    call MPI_ALLREDUCE(txy_HAve_local,txy_HAve,ny,real_type,MPI_SUM,MPI_COMM_WORLD,code)
-    call MPI_ALLREDUCE(tyz_HAve_local,tyz_HAve,ny,real_type,MPI_SUM,MPI_COMM_WORLD,code)
+    call MPI_IALLREDUCE(u_HAve_local,u_HAve,ny,real_type,MPI_SUM,MPI_COMM_WORLD,code)
+    call MPI_IALLREDUCE(v_HAve_local,v_HAve,ny,real_type,MPI_SUM,MPI_COMM_WORLD,code)
+    call MPI_IALLREDUCE(w_HAve_local,w_HAve,ny,real_type,MPI_SUM,MPI_COMM_WORLD,code)
+    call MPI_IALLREDUCE(uxy_HAve_local,uxy_HAve,ny,real_type,MPI_SUM,MPI_COMM_WORLD,code)
+    call MPI_IALLREDUCE(uyz_HAve_local,uyz_HAve,ny,real_type,MPI_SUM,MPI_COMM_WORLD,code)
+    call MPI_IALLREDUCE(txy_HAve_local,txy_HAve,ny,real_type,MPI_SUM,MPI_COMM_WORLD,code)
+    call MPI_IALLREDUCE(tyz_HAve_local,tyz_HAve,ny,real_type,MPI_SUM,MPI_COMM_WORLD,code)
     u_HAve  =  u_HAve/real(nx*nz,mytype)
     v_HAve  =  v_HAve/real(nx*nz,mytype)
     w_HAve  =  w_HAve/real(nx*nz,mytype)

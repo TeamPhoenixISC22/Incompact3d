@@ -466,9 +466,9 @@ contains
          endif
       enddo
 
-      call MPI_ALLREDUCE(Su_part,Su,Nsource,real_type,MPI_SUM,MPI_COMM_WORLD,ierr)
-      call MPI_ALLREDUCE(Sv_part,Sv,Nsource,real_type,MPI_SUM,MPI_COMM_WORLD,ierr)
-      call MPI_ALLREDUCE(Sw_part,Sw,Nsource,real_type,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call MPI_IALLREDUCE(Su_part,Su,Nsource,real_type,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call MPI_IALLREDUCE(Sv_part,Sv,Nsource,real_type,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call MPI_IALLREDUCE(Sw_part,Sw,Nsource,real_type,MPI_SUM,MPI_COMM_WORLD,ierr)
 
       ! Zero the Source term at each time step
       FTx(:,:,:)=zero
